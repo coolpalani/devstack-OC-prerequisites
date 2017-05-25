@@ -36,10 +36,10 @@ function deploy {
 
 	cp samples/local.conf .
 	echo "enable_plugin contrail https://github.com/zioc/contrail-devstack-plugin.git" >> local.conf
-	OC="CONTRAIL_BRANCH=$OC" 
+	OC="CONTRAIL_BRANCH=$OC"
 	echo $OC >> local.conf
 
-	printf "Ready to run Devstack+OC [n/Y]? " 
+	printf "Ready to run Devstack $branch and OC $OC [n/Y]? "
 	read -n 1 -r run
 	if [ -z $run ] || [ $run == y ] || [ $run == Y ];
 		then
@@ -47,7 +47,37 @@ function deploy {
 	fi
 }
 
-printf "What do you want to do [1]: \n\r 1 - install prerequisites, clone Devstack+OC repo and run devstack \n\r 2 - unstack \n\r 3 - unstack and clean \n\r"
+function fixes {
+
+	function FixKafka {
+		#	Kafka build fails, add build options (Link flags) and make sure if packages are installed
+		#	sudo apt-get install libssl-dev libsasl2-dev liblz4-dev
+		#	edit: controller/src/analytics/SConscript  add "'-lssl', '-lcrypto', '-lpthread',"
+		#	if sys.platform != 'darwin':
+		#    AnalyticsEnv.Prepend(LINKFLAGS =
+		#                         ['-Wl,--whole-archive',
+		#                          '-lbase', '-lcpuinfo',
+		#                          '-lprocess_info', '-lnodeinfo',
+		#                          '-l:librdkafka.a', '-l:librdkafka++.a','-lssl', '-lcrypto', '-lpthread',
+		#                          '-Wl,--no-whole-archive'])
+		sudo apt-get install libssl-dev libsasl2-dev liblz4-dev
+		sudo sed -ie "/'-l:librdkafka.a', '-l:librdkafka++.a',/s/$/ '-lssl', '-lcrypto', '-lpthread',/" /opt/stack/contrail/controller/src/analytics/SConscript
+	}
+
+	printf "What fix do you want to apply? [exit]: \n\r 1 - Fix Kafka ssl build \n\r "
+	read -n 1 -r fix
+	case "$fix" in
+	1)
+		FixKafka
+	;;
+	*)
+		exit 1
+	;;
+esac
+
+}
+
+printf "What do you want to do [1]: \n\r 1 - install prerequisites, clone Devstack+OC repo and run devstack \n\r 2 - restack \n\r 3 - unstack and clean \n\r 4 - run fixes \n\r"
 read slct
 case "$slct" in
 	1)
@@ -56,24 +86,18 @@ case "$slct" in
 	2)
 		cd devstack
 		./unstack.sh
+		./clean.sh
+		./stack.sh
 	;;
 	3)
 		cd devstack
 		./unstack.sh
-		./clean.sh		
+		./clean.sh
+	;;
+	4)
+		fixes
 	;;
 	*)
 		deploy
 	;;
 esac
-
-#	error s ssl / kafka build failne kvuli ssl
-#	sudo apt-get install libssl-dev libsasl2-dev liblz4-dev
-#	upravit: controller/src/analytics/SConscript -- pridat "'-lssl', '-lcrypto', '-lpthread',"
-#	if sys.platform != 'darwin':
-#    AnalyticsEnv.Prepend(LINKFLAGS =
-#                         ['-Wl,--whole-archive',
-#                          '-lbase', '-lcpuinfo',
-#                          '-lprocess_info', '-lnodeinfo',
-#                          '-l:librdkafka.a', '-l:librdkafka++.a','-lssl', '-lcrypto', '-lpthread',
-#                          '-Wl,--no-whole-archive'])

@@ -61,7 +61,7 @@ function fixes {
 		#                          '-l:librdkafka.a', '-l:librdkafka++.a','-lssl', '-lcrypto', '-lpthread',
 		#                          '-Wl,--no-whole-archive'])
 		sudo apt-get install libssl-dev libsasl2-dev liblz4-dev
-		sudo sed -ie "/'-l:librdkafka.a', '-l:librdkafka++.a',/s/$/ '-lssl', '-lcrypto', '-lpthread',/" /opt/stack/contrail/controller/src/analytics/SConscript
+		sudo sed -ie "/'-l:librdkafka.a', '-l:librdkafka++.a',/s/$/ '-lssl', '-lcrypto', '-lpthread', '-ldl', '-lsasl2', /" /opt/stack/contrail/controller/src/analytics/SConscript
 	}
 
 	printf "What fix do you want to apply? [exit]: \n\r 1 - Fix Kafka ssl build \n\r "
